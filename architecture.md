@@ -1,204 +1,135 @@
-# Architecture Overview
-
-This document provides a high-level overview of the architecture for the Saved Item Vault mobile application. It is intended to help contributors quickly understand the system structure, data flow, and key design decisions. This document should evolve alongside the codebase as features and complexity grow.
-
----
-
-## 1. Project Structure
-
-The project follows a layered architecture that clearly separates UI, domain logic, and data access. This structure is designed to scale as the application grows while keeping responsibilities well-defined.
-
-```
-[Project Root]/
-├── src/
-│   ├── screens/            # Application screens (navigation-level UI)
-│   ├── components/         # Reusable UI components
-│   ├── domain/
-│   │   ├── models/         # Core domain models (e.g., Item)
-│   │   ├── repositories/   # Repository interfaces (contracts)
-│   │   └── usecases/       # Business logic / application use cases
-│   ├── data/
-│   │   ├── firebase/       # Firebase configuration and Firestore implementations
-│   │   └── cache/          # Local persistence and caching abstractions
-│   ├── state/              # Global state management
-│   ├── navigation/         # Navigation and deep linking configuration
-│   ├── utils/              # Shared utilities and error handling
-│   └── types/              # Shared TypeScript types
-├── docs/                   # Additional documentation
-├── README.md               # Project overview and setup instructions
-├── ARCHITECTURE.md         # This document
-├── app.json                # Expo configuration
-└── package.json            # Dependencies and scripts
-```
-
-This structure enforces a strict separation of concerns and prevents UI components from directly accessing Firebase or business logic.
-
----
-
-## 2. High-Level System Diagram
-
-```
-[User]
-  |
-  v
-[React Native App (Expo)]
-  |
-  v
-[Domain Layer (Use Cases)]
-  |
-  v
-[Repository Interfaces]
-  |
-  v
-[Firestore Repository Implementation]
-  |
-  v
-[Firebase Firestore]
-```
-
-Deep linking flows bypass the list screen and route directly to the item detail screen after validation and data retrieval.
-
----
-
-## 3. Core Components
-
-### 3.1. Mobile Application
-
-Name: Saved Item Vault (Mobile App)
-
-Description:
-A React Native mobile application that allows authenticated users to browse items, save and unsave them, view their saved items, and share items via deep links. The app is designed to work reliably across restarts and in offline conditions.
-
-Technologies:
-
-* React Native
-* Expo
-* TypeScript
-* Expo Linking
-
-Deployment:
-
-* Android and iOS builds via Expo (planned)
-
----
-
-### 3.2. Data Access Layer
-
-Name: Firestore Item Repository
-
-Description:
-Implements repository interfaces responsible for retrieving and persisting item data and user-specific saved state. This layer isolates Firebase SDK usage from the rest of the application.
-
-Technologies:
-
-* Firebase Firestore
-* Firebase Authentication
-
-Deployment:
-
-* Firebase-managed infrastructure
-
----
-
-## 4. Data Stores
-
-### 4.1. Primary Data Store
-
-Name: Firestore Database
-
-Type: Firebase Firestore
-
-Purpose:
-Stores application data including globally accessible items and user-specific saved state.
-
-Key Collections:
-
-* items
-* users/{userId}/savedItems
-
-## 5. External Integrations / APIs
-
-Service: Firebase Authentication
-Purpose: User authentication (anonymous or email-based)
-Integration Method: Firebase SDK
-
-Service: Expo Linking
-Purpose: Deep linking and routing shared item links
-Integration Method: Expo Linking API
-
----
-
-## 6. Deployment & Infrastructure
-
-Cloud Provider: Firebase / Google Cloud Platform
-
-Key Services Used:
-
-* Firestore
-* Firebase Authentication
-
-CI/CD:
-Not configured for this assignment (out of scope)
-
-Monitoring & Logging:
-Console logging and defensive error handling at application boundaries
-
----
-
-## 7. Security Considerations
-
-Authentication:
-Firebase Authentication ensures all saved-item operations are scoped to an authenticated user.
-
-Authorization:
-Firestore security rules restrict saved items to the owning user.
-Items are globally readable to support sharing via links.
-
-Data Encryption:
-TLS for data in transit
-Encryption at rest handled by Firebase
-
----
-
-## 8. Development & Testing Environment
-
-Local Setup:
-
-* Install dependencies via npm install
-* Run locally using expo start
-
-Testing:
-
-* Automated testing is limited for this assignment due to time constraints
-* Repository abstractions are designed to be testable
-
-Code Quality Tools:
-
-* TypeScript
-* ESLint
-
----
-
-## 9. Future Considerations / Roadmap
-
-* Add pagination and cursor-based loading for large item lists
-* Introduce background sync and retry strategies
-* Add analytics and structured logging
-* Expand saved items to support collections or tagging
-* Introduce automated tests for domain use cases
-
-## 10. Project Identification
-
-Project Name: Saved Item Vault
-Repository: saved-item-react-native
-Primary Developer: Rupesh Bhatta
-Date of Last Update: 2026-01-23
-
----
-
-## 11. Glossary / Acronyms
-
-Item: A piece of content (e.g., article or resource) that can be saved and shared
-Repository Pattern: An abstraction layer that isolates data access logic from business logic
-Offline-First: An approach where the app remains usable without network connectivity
-
+# Architecture Overview: Saved Items
+
+## 1. Project Identity
+* Project Name: Saved Items
+* Repository: saved-items-react-native
+* Stack: React Native (Expo), TypeScript, Firebase Firestore
+* Architecture Style: Feature-Based Vertical Slicing
+* Author: Rupesh Bhatta
+* Last Updated: January 23, 2026
+
+## 2. High-Level Strategy
+This project abandons traditional "Layered" architecture (splitting folders by file type) in favor of Feature-Based Architecture. Code is organized by domain feature (e.g., Feed, Saved, ItemDetails) rather than technical role. This improves scalability, enhances code navigation, and allows for strict separation of concerns.
+
+### Core Principles
+1. Offline-First: All data interactions assume potential network loss. We utilize Firestore's native persistence cache as the single source of truth for the UI.
+2. Unidirectional Data Flow: UI components never modify state directly. They trigger Actions -> Repositories -> Server State -> UI Updates.
+3. Read Optimization: The data model is structured to minimize document reads during list scrolling (denormalization where appropriate).
+
+## 3. Directory Structure (Vertical Slicing)
+We utilize Expo Router for navigation (app/) and keep business logic (src/) distinct and modular.
+
+saved-items-react-native/
+├── .gitignore
+├── app.json                    # Expo Config (schemes, package names)
+├── babel.config.js             # Standard Expo Babel config
+├── package.json                # Dependencies
+├── tsconfig.json               # TypeScript config
+├── ARCHITECTURE.md             # (You have this)
+├── phases.md                   # (You have this - ignored by git)
+├── README.md                   # (You have this)
+├── LICENSE                     # (You have this)
+├── google-services.json        # Android Firebase Config (Download from Console)
+├── GoogleService-Info.plist    # iOS Firebase Config (Download from Console)
+│
+├── assets/                     # Standard Expo Assets
+│   ├── adaptive-icon.png
+│   ├── favicon.png
+│   ├── icon.png
+│   └── splash.png
+│
+├── app/                        # NAVIGATION LAYER (Expo Router)
+│   ├── _layout.tsx             # Root Layout (Providers: QueryClient, Auth)
+│   ├── +not-found.tsx          # Global 404 Error Screen
+│   │
+│   ├── (tabs)/                 # Main Tab Navigation
+│   │   ├── _layout.tsx         # Tab Bar Configuration (Icons, Colors)
+│   │   ├── index.tsx           # Route: / (The Feed Screen)
+│   │   └── saved.tsx           # Route: /saved (The Saved Items Screen)
+│   │
+│   └── item/                   # Nested Routes
+│       └── [id].tsx            # Route: /item/:id (Deep Link Target)
+│
+└── src/                        # BUSINESS LOGIC LAYER
+    ├── core/                   # Shared Foundations
+    │   ├── auth/
+    │   │   └── index.ts        # (Optional) Auth helpers if needed
+    │   ├── theme/
+    │   │   └── index.ts        # Colors, Spacing constants
+    │   └── ui/
+    │       └── ErrorView.tsx   # Reusable Error Component
+    │
+    ├── features/               # Vertical Slices
+    │   ├── feed/
+    │   │   ├── components/
+    │   │   │   └── FeedList.tsx
+    │   │   ├── hooks/
+    │   │   │   └── useFeedQuery.ts
+    │   │   └── repository.ts   # FeedRepository (fetchItems)
+    │   │
+    │   ├── saved/
+    │   │   ├── hooks/
+    │   │   │   └── useToggleSave.ts
+    │   │   └── repository.ts   # SavedRepository (toggleSave, fetchSavedIds)
+    │   │
+    │   └── item-details/
+    │       ├── components/
+    │       │   └── ItemDetailView.tsx
+    │       └── repository.ts   # ItemDetailRepository (fetchById)
+    │
+    ├── services/               # Infrastructure
+    │   └── firebase.ts         # Firebase App Initialization
+    │
+    └── types/                  # Global Types
+        └── index.ts            # Interface Item {}
+
+## 4. Tech Stack & Decisions
+
+State Management: TanStack Query
+- Rationale: Handles server state, caching, loading states, and background refetching efficiently. Essential for the "Offline" requirement.
+
+List Rendering: FlashList
+- Rationale: Chosen over FlatList to satisfy the 1,000+ item performance requirement. Uses view recycling to maintain 60fps.
+
+Navigation: Expo Router
+- Rationale: Provides native deep linking capability out-of-the-box (saveditems://item/123).
+
+Data Layer: Typed Repositories
+- Rationale: Decouples the UI from Firestore SDK. Allows for easy mocking during tests and strict type safety.
+
+## 5. Data Modeling (Firestore)
+
+### 5.1. Collection: items
+The master inventory list. Read-heavy optimization.
+* Path: items/{itemId}
+* Model:
+    interface Item {
+      id: string;
+      title: string;
+      description: string;
+      updatedAt: number; // Unix timestamp for sorting
+    }
+
+### 5.2. Collection: users/{uid}/saved
+Stores user-specific relationships.
+* Path: users/{uid}/saved/{itemId}
+* Strategy: Idempotent Keys. The document ID is explicitly set to the Item ID.
+* Content: { savedAt: number }
+* Note: We do not duplicate the full item details here (normalization). The UI resolves item details by matching IDs against the items cache. This ensures data consistency (if an item description updates, the user sees it immediately).
+
+## 6. Deep Linking Strategy
+* Scheme: saveditems://item/{id}
+* Flow:
+    1. Cold Start: App launches -> Auth Check -> Navigation to app/item/[id].
+    2. Resolution: The [id].tsx route triggers useItemDetails(id).
+    3. Resilience: If the ID doesn't exist (e.g., item was deleted), the UI handles the 404 error gracefully with a "Content Unavailable" view instead of crashing.
+
+## 7. Scalability & Performance Strategies
+* Pagination: Feeds fetch data in batches of 20 using Firestore cursors (startAfter) to prevent memory overload.
+* Memoization: List items are wrapped in React.memo to prevent re-rendering the entire list when a single item's state changes.
+* Optimistic Updates: "Save" actions update the UI immediately via React Query's onMutate handler before the network request completes, ensuring the app feels responsive even on slow networks.
+
+## 8. Error Handling & Edge Cases
+* Network Failures: Handled implicitly by Firestore Persistence (offline read/write) and React Query retries.
+* Corrupt Data: Zod schemas validate data at the Repository boundary. Malformed items are filtered out to prevent UI crashes.
+* App Restart: Writes (e.g., saving an item) initiated while offline are persisted by the Firebase SDK and automatically synced upon app restart.
