@@ -1,4 +1,4 @@
-package com.rupeshxb.saveditemsreactnative
+package com.rupeshxb.saveditems
 
 import android.app.Application
 import android.content.res.Configuration
