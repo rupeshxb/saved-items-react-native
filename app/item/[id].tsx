@@ -1,49 +1,35 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { doc, onSnapshot } from '@react-native-firebase/firestore';
-import { FIREBASE_DB } from '../../src/core/services/firebase';
+import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 
 export default function ItemDetail() {
   const { id } = useLocalSearchParams();
   const [item, setItem] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-
-    const docRef = doc(FIREBASE_DB, 'items', id as string);
-    
-    // 👇 FIX: Removed explicit type to let TS infer correctly, and added ()
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) { 
+    const fetchItem = async () => {
+      const docRef = doc(db, "items", id as string);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
         setItem(docSnap.data());
       }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    };
+    if (id) fetchItem();
   }, [id]);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" /></View>;
-  if (!item) return <View style={styles.center}><Text>Item not found!</Text></View>;
+  if (!item) return <View style={styles.container}><Text>Loading...</Text></View>;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Shared Item:</Text>
-      <Text style={styles.title}>{item.name}</Text>
-      <View style={styles.card}>
-        <Text style={styles.desc}>{item.description}</Text>
-      </View>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text>ID: {id}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#F3F4F6', justifyContent: 'center' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  label: { fontSize: 16, color: '#666', marginBottom: 5, textAlign: 'center' },
-  title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
-  card: { backgroundColor: 'white', padding: 20, borderRadius: 15, elevation: 3 },
-  desc: { fontSize: 18, lineHeight: 26, color: '#333' }
+  container: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: 'bold' }
 });

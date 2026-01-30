@@ -1,60 +1,70 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { collection, addDoc } from '@react-native-firebase/firestore';
-import { FIREBASE_DB, FIREBASE_AUTH } from '../src/core/services/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../firebaseConfig';
 
 export default function AddItem() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [desc, setDesc] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
 
-  const handleSave = async () => {
-    if (!name || !desc) {
-      Alert.alert('Error', 'Please fill in all fields');
+  const saveItem = async () => {
+    if (title.trim() === '') {
+      Alert.alert("Error", "Please enter a title");
       return;
     }
     
-    setLoading(true);
     try {
-      const user = FIREBASE_AUTH.currentUser;
-      
-      await addDoc(collection(FIREBASE_DB, 'items'), {
-        name: name,
-        description: desc,
-        createdBy: user?.uid, // Keep track of who made it
-        // 👇 NEW: Everyone in this list can see the item
-        sharedWith: [user?.email], 
-        createdAt: new Date().toISOString(),
+      if (!auth.currentUser) {
+        Alert.alert("Error", "You must be logged in");
+        return;
+      }
+
+      await addDoc(collection(db, "items"), {
+        title: title,
+        url: url, // Saving the link
+        userId: auth.currentUser.uid, // <--- CRITICAL: Ties item to THIS user
+        createdAt: serverTimestamp()
       });
-      
-      Alert.alert('Success', 'Item Saved!');
       router.back();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      Alert.alert("Error", "Could not save item");
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Add New Item</Text>
-      <TextInput style={styles.input} placeholder="Item Name" value={name} onChangeText={setName} />
-      <TextInput style={styles.area} placeholder="Description" value={desc} onChangeText={setDesc} multiline />
-      <TouchableOpacity style={styles.btn} onPress={handleSave} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save Item</Text>}
+      <Text style={styles.header}>Add to Vault</Text>
+      
+      <TextInput 
+        style={styles.input} 
+        placeholder="Item Title (e.g., My Portfolio)" 
+        value={title} 
+        onChangeText={setTitle} 
+      />
+      
+      <TextInput 
+        style={styles.input} 
+        placeholder="Link / URL (optional)" 
+        value={url} 
+        onChangeText={setUrl}
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+      
+      <TouchableOpacity style={styles.button} onPress={saveItem}>
+        <Text style={styles.buttonText}>Save Item</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: '#fff', justifyContent: 'center' },
-  header: { fontSize: 28, fontWeight: 'bold', marginBottom: 24, color: '#1F2937' },
-  input: { borderWidth: 1, borderColor: '#E5E7EB', padding: 16, borderRadius: 12, marginBottom: 16, fontSize: 16, backgroundColor: '#F9FAFB' },
-  area: { borderWidth: 1, borderColor: '#E5E7EB', padding: 16, borderRadius: 12, marginBottom: 24, fontSize: 16, height: 120, textAlignVertical: 'top', backgroundColor: '#F9FAFB' },
-  btn: { backgroundColor: '#2563EB', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnText: { color: 'white', fontWeight: 'bold', fontSize: 18 }
+  container: { flex: 1, padding: 20, paddingTop: 60, backgroundColor: '#f5f5f5' },
+  header: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  input: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 15, fontSize: 16 },
+  button: { backgroundColor: '#007AFF', padding: 15, borderRadius: 10, alignItems: 'center' },
+  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 }
 });
