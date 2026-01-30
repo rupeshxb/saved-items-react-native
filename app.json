@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "saved-items-react-native",
-    "slug": "saved-items-react-native",
+    "slug": "saved-items-vault-react-native",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,6 +31,15 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "d13ea08c-ff1e-4b66-a0cd-56f966bc075d"
+      }
+    },
+    "owner": "rupeshxb"
   }
 }
