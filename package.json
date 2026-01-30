@@ -31,7 +31,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
+    "@types/react": "~18.3.12",
     "babel-preset-expo": "^54.0.10",
     "nativewind": "^4.2.1",
     "react-refresh": "^0.18.0",
