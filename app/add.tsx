@@ -1,67 +1,167 @@
-import { View, TextInput, Button, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { ItemRepository } from '../services/ItemRepository'; // Import Repo
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ActivityIndicator, 
+  Alert, 
+  StatusBar 
+} from 'react-native';
+import { useRouter, Stack } from 'expo-router'; // <--- Added Stack import
+import { ItemRepository } from '../services/ItemRepository';
 
 export default function AddItemScreen() {
   const router = useRouter();
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert('Error', 'Title is required');
+  const handleCreate = async () => {
+    if (!title || !description) {
+      Alert.alert("Missing Info", "Please enter a title and description.");
       return;
     }
 
-    // Basic URL validation
-    if (url && !url.startsWith('http')) {
-      Alert.alert('Error', 'URL must start with http:// or https://');
-      return;
-    }
-
-    setSaving(true);
+    setLoading(true);
     try {
-      // USE REPOSITORY INSTEAD OF DIRECT FIRESTORE CALLS
-      await ItemRepository.createItem(title, url);
-      
-      Alert.alert('Success', 'Item saved!');
-      router.back(); // Go back to Home
+      await ItemRepository.createItem(title, description, url);
+      router.back(); 
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert("Error", "Could not save item: " + error.message);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <TextInput
-        placeholder="Title"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="URL (optional)"
-        value={url}
-        onChangeText={setUrl}
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="url"
-      />
+      {/* THIS LINE HIDES THE SYSTEM HEADER */}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <StatusBar barStyle="light-content" backgroundColor="#0288D1" />
       
-      {saving ? (
-        <ActivityIndicator size="small" color="#0000ff" />
-      ) : (
-        <Button title="Save Item" onPress={handleSave} />
-      )}
+      {/* CUSTOM HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New Item</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* FORM CONTAINER */}
+      <View style={styles.formContainer}>
+        <Text style={styles.helperText}>
+            Securely store a password, note, or sensitive link in your vault.
+        </Text>
+
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>Title</Text>
+            <TextInput 
+                style={styles.input} 
+                placeholder="e.g., Netflix Password" 
+                placeholderTextColor="#B0BEC5"
+                value={title}
+                onChangeText={setTitle}
+            />
+        </View>
+
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>Secret / Description</Text>
+            <TextInput 
+                style={[styles.input, styles.textArea]} 
+                placeholder="Enter your secret details here..." 
+                placeholderTextColor="#B0BEC5"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+            />
+        </View>
+
+        <View style={styles.inputGroup}>
+            <Text style={styles.label}>Relevant Link (Optional)</Text>
+            <TextInput 
+                style={styles.input} 
+                placeholder="https://..." 
+                placeholderTextColor="#B0BEC5"
+                value={url}
+                onChangeText={setUrl}
+                autoCapitalize="none"
+            />
+        </View>
+
+        <TouchableOpacity 
+            style={[styles.saveBtn, loading && styles.saveBtnDisabled]} 
+            onPress={handleCreate}
+            disabled={loading}
+        >
+            {loading ? (
+                <ActivityIndicator color="#fff" />
+            ) : (
+                <Text style={styles.saveBtnText}>Lock in Vault</Text>
+            )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginBottom: 15, borderRadius: 5 },
+  container: { flex: 1, backgroundColor: '#F1F9FF' },
+  
+  header: { 
+    backgroundColor: '#0288D1', 
+    paddingTop: 60, 
+    paddingBottom: 20, 
+    paddingHorizontal: 20, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    elevation: 4 
+  },
+  backBtn: { padding: 5 },
+  backText: { fontSize: 28, color: '#fff', fontWeight: 'bold' },
+  headerTitle: { fontSize: 20, color: '#fff', fontWeight: 'bold' },
+
+  formContainer: { padding: 25 },
+  helperText: { color: '#546E7A', marginBottom: 25, lineHeight: 20 },
+  
+  inputGroup: { marginBottom: 20 },
+  label: { 
+    fontSize: 12, 
+    color: '#0288D1', 
+    fontWeight: 'bold', 
+    textTransform: 'uppercase', 
+    marginBottom: 8 
+  },
+  input: { 
+    backgroundColor: '#fff', 
+    borderWidth: 1, 
+    borderColor: '#CFD8DC', 
+    borderRadius: 8, 
+    padding: 15, 
+    fontSize: 16, 
+    color: '#333' 
+  },
+  textArea: { height: 120 },
+
+  saveBtn: { 
+    backgroundColor: '#0288D1', 
+    paddingVertical: 18, 
+    borderRadius: 10, 
+    alignItems: 'center', 
+    marginTop: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  saveBtnDisabled: { backgroundColor: '#B0BEC5' },
+  saveBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });

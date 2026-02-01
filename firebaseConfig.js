@@ -1,8 +1,11 @@
-import { initializeApp, getApp, getApps } from "firebase/app";
-import { initializeAuth, getReactNativePersistence, getAuth } from "firebase/auth";
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import { getFirestore } from "firebase/firestore";
-
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { 
+  initializeAuth, 
+  getReactNativePersistence, 
+  getAuth 
+} from 'firebase/auth';
+import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyB9X70-R92O2cQcHaMIpPxiBR2afXePCZc",
@@ -14,23 +17,31 @@ const firebaseConfig = {
   measurementId: "G-RYZ49HLBLY"
 };
 
-let app;
-let auth;
+// 1. Initialize App (Singleton Pattern)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
+// 2. Initialize Auth with Persistence
+let auth;
 try {
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-    });
-  } else {
-    app = getApp();
-    auth = getAuth(app);
-  }
-} catch (error) {
-  console.log("Error initializing Firebase:", error);
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+} catch (e) {
+  auth = getAuth(app);
 }
 
-const db = getFirestore(app);
+// 3. Initialize Firestore (Safe Pattern)
+let db;
+try {
+    // Try to initialize with custom settings (Offline Persistence & Stability)
+    db = initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+        ignoreUndefinedProperties: true,
+    });
+} catch (e) {
+    // If already initialized, just grab the existing instance
+    // This ignores the custom settings but prevents the app from crashing during hot reloads
+    db = getFirestore(app);
+}
 
 export { auth, db };
